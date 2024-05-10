@@ -3,33 +3,28 @@ import random
 import math
 import time
 
-# Note the number of augmentations taken prior in get_data.py
-data_aug_count = 8
-# create_bar_offset = 4
+# Note the number of augmentations taken prior, has to match get_data.py
+data_aug_count = 8  # number of pitch shifts done. 0 for no augmentation. 12 for all 12 keys in music.
 
 #load data
 
 data = np.load('data_x.npy')   # size is (training_samples, 1, 128, 16), where 128: midi notes, 16: timestep length
 prev_data = np.load('prev_x.npy')
 
-print(np.shape(data))
-print(np.shape(prev_data))
+print("Data shape:", np.shape(data))
+print("Prev shape:", np.shape(prev_data))
 
 chord_data = np.load('data_y.npy')
 
-print(np.shape(chord_data))
-
-# data = np.load('octave2_x_T.npy')
-# prev_data = np.load('octave2_prev_x_T.npy')
-print('data shape: {}'.format(data.shape))
-time.sleep(3)
+print("Chord shape:",np.shape(chord_data))
+time.sleep(3)  # comment this out to skip waiting
 
 song_idx = int(data.shape[0]/8) // (data_aug_count + 1)
 test_ratial = 0.1
 test_song_num = round(song_idx*test_ratial)
-train_song_num = data.shape[0] - test_song_num
+train_song_num = (data.shape[0] - test_song_num) // data_aug_count
 print('total song number: {}'.format(song_idx))
-print('number of test song: {}, \n,number of train song: {}'.format(test_song_num,train_song_num))
+print('number of test songs: {}, \nnumber of train songs: {}'.format(test_song_num,train_song_num))
 time.sleep(3)
 
 #create the song idx for test data
@@ -56,15 +51,14 @@ def test_data(data,test_idx,chord_data):
 
     for i in range(test_idx.shape[0]):
         # don't augment test data
-        # for j in range(data_aug_count+1):
-        stp = (test_idx[i])*8*(data_aug_count+1)  # no augmentation but still needs to skip those examples
+        stp = (test_idx[i])*8*(data_aug_count+1)  # no augmentation but still needs to skip those aug examples
         edp = stp + 8
         print("Test idx:", train_idx[i], stp, edp)
         song = data[stp:edp,0,:,:]
-        song = song.reshape((8,1,128,16))   # modification: divisions per bar to 16
-        # song = np.transpose(song, (0,1,3,2))  # do a transpose step here to fit data
+        song = song.reshape((8,1,128,16))   # 8 bars, 1 track, 128 pitch range, 16 subdivisions per bar
         X_te.append(song)
-        # added
+
+        # added chord handling into original file
         chords = chord_data[stp:edp,0,:]
         chords = chords.reshape((8,1,13,1))
         y_te.append(chords)
@@ -82,15 +76,14 @@ def train_data(data,train_idx,chord_data):
     y_tr = []
 
     for i in range(train_idx.shape[0]):
-        for j in range(data_aug_count+1):
-            stp = (train_idx[i])*8*(data_aug_count+1) + j*8
+        for j in range(data_aug_count+1):  # augmentation
+            stp = (train_idx[i])*8*(data_aug_count+1) + j*8  # reading original files and the augmented indices
             edp = stp + 8
             # print("Train idx:", train_idx[i], stp, edp)
             song = data[stp:edp,0,:,:]
-            song = song.reshape((8,1,128,16))   # modification: pitch dimension is now 64 instead of 128
-            # song = np.transpose(song, (0,1,3,2))  # do a transpose step here to fit data
+            song = song.reshape((8,1,128,16)) 
             X_tr.append(song)
-            # added
+            # added chord handling into original file
             chords = chord_data[stp:edp,0,:]
             chords = chords.reshape((8,1,13,1))  # reshape
             y_tr.append(chords)
@@ -104,7 +97,7 @@ def train_data(data,train_idx,chord_data):
 
 
 # test_data
-X_te, y_te = test_data(data,test_idx,chord_data) # just added chord_data_into_this
+X_te, y_te = test_data(data,test_idx,chord_data)
 prev_X_te, _ = test_data(prev_data,test_idx,chord_data)
 np.save('data/data_X_te.npy',X_te)
 np.save('data/prev_X_te.npy',prev_X_te)

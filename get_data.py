@@ -6,6 +6,9 @@ import ipdb
 import numpy as np
 
 
+# data augmentation step, by shifting midi pitch (0 for no augmentation, 12 for all 12 keys)
+data_aug_count = 8
+
 def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wrapback=128):
 
     cur_bar =np.zeros((1,dim_pitch,dim_bar),dtype=int)
@@ -14,20 +17,18 @@ def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wra
     ed = 0
     song_sample=[]
     
-    # modification: take only 36 ~ 84 range is enough
-    
     while idx < len(cur_song):
         initial_pitch = cur_song[idx]-1
 
         # special case for chords
         is_minor_chord = 0
         if wrapback == 12 and initial_pitch >= 12:
-            is_minor_chord = 1
+            is_minor_chord = 1  # matches MIDINET paper's encoding
 
         cur_pitch = (cur_song[idx]-1 - start_pitch) % wrapback
 
-        
-        # pre-processing already got rid of triplets so don't worry
+        # due to model limitations, previous files pre-processing already got rid of triplets present in the dataset
+        # so no rounding needed here
         ed = int(ed + cur_dur[idx]*n_ratio//1)
         
         # print('pitch: {}, sd:{}, ed:{}'.format(cur_pitch, sd, ed))
@@ -35,7 +36,7 @@ def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wra
             # draws piano roll
             cur_bar[0,cur_pitch,sd:ed]=1
 
-            # special case for minor_chords
+            # special case for minor_chords (MIDINET encoding)
             if is_minor_chord:
                 cur_bar[0, 12, sd:ed]=1   # code the minor chord to 1 to match author's setup
                 # print("Minor_chord_applied")
@@ -45,9 +46,9 @@ def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wra
         elif ed >= dim_bar:
             cur_bar[0,cur_pitch,sd:]=1
 
-            # special case for minor_chords
+            # special case for minor_chords (MIDINET encoding)
             if is_minor_chord:
-                cur_bar[0, 12, sd:]=1   # code the minor chord to 1 to match author's setup
+                cur_bar[0, 12, sd:]=1
                 # print("Minor_chord_applied")
 
             song_sample.append(cur_bar)
@@ -60,8 +61,6 @@ def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wra
         #     song_sample.append(cur_bar)
     # print("Size:", np.shape(song_sample))
 
-    # remove the extra 64 notes we just wouldn't use
-    # range is now 24 ~ 72
     return song_sample
 
 def build_matrix(note_list_all_c,dur_list_all_c):
@@ -69,7 +68,6 @@ def build_matrix(note_list_all_c,dur_list_all_c):
     prev_x = []
     zero_counter = 0
 
-    data_aug_count = 8
     for i in range(len(note_list_all_c)):
         
         song = note_list_all_c[i]
@@ -79,14 +77,19 @@ def build_matrix(note_list_all_c,dur_list_all_c):
         # data shifts semitone up each time
         for j in range(data_aug_count+1):
 
-            # song, dur, n_ratio (divisions per beat), dim_pitch, dim_bar (divisions per bar * 8)
-            song_sample = get_sample(song,dur,4,128,128, start_pitch= -j, wrapback=128)   # j = 0; j = -1 (using offset hack)
-            np_sample = np.asarray(song_sample)    # may try the split of 64 (4 bars) to see if it improves
+            # suggested modification: take only 36 ~ 84 pitch range 
+            # we only need to use 48 MIDI pitches
+            # in that case, start_pitch = 36-j, dim_pitch=48
+
+            # get_sample() params:
+            # song, dur, n_ratio (divisions per beat), dim_pitch, dim_bar (divisions per bar * 8), pitch offset, "modulo"
+            song_sample = get_sample(song,dur,4,128,128, start_pitch= -j, wrapback=128)   # reusing the offset code which is why it's negative
+            np_sample = np.asarray(song_sample)
             if len(np_sample) == 0:
                 zero_counter +=1
             if len(np_sample) != 0:
                 np_sample =np_sample[0]
-                np_sample = np_sample.reshape(1,1,128,128) # modified to 96 from 128
+                np_sample = np_sample.reshape(1,1,128,128)
 
                 # since we're dealing with swing and triples, dimensions set to 12
 
@@ -109,14 +112,13 @@ def build_matrix(note_list_all_c,dur_list_all_c):
 
 def build_chord_matrix(chord_list_all_c,cdur_list_all_c):
     data_y = []
-    data_aug_count = 8
     for i in range(len(chord_list_all_c)):
         chords = chord_list_all_c[i]
         dur = cdur_list_all_c[i]
 
         for j in range(data_aug_count+1):
 
-            song_sample = get_sample(chords,dur, 0.25, 13, 8, start_pitch= -j, wrapback=12)
+            song_sample = get_sample(chords,dur, 0.25, 13, 8, start_pitch= -j, wrapback=12) 
             np_sample = np.asarray(song_sample)
             # if len(np_sample) == 0:
             #     zero_counter +=1
@@ -130,16 +132,14 @@ def build_chord_matrix(chord_list_all_c,cdur_list_all_c):
                     new=[]
                     for i in range(0,place,1):
                         new.append(np_sample[0][:,:,i])
-                    new = np.asarray(new)  # (2,1,13,8) will become (16,1,13,1)
-                    #new_prev = np.zeros(new.shape,dtype=int)
-                    #new_prev[1:, :, :, :] = new[0:new.shape[0]-1, :, :, :]            
+                    new = np.asarray(new)  # (2,1,13,8) will become (16,1,13,1)    
                     data_y.append(new)
-                    #prev_x.append(new_prev) 
-                    # print("NEW:", new) 
 
     data_y = np.vstack(data_y)
     return data_y
 
+
+# unused
 def check_melody_range(note_list_all,dur_list_all):
     in_range=0
     note_list_all_c = []
@@ -158,7 +158,9 @@ def check_melody_range(note_list_all,dur_list_all):
 
     return in_range,note_list_all_c,dur_list_all_c
 
-def transform_note(c_key_list,d_key_list,e_key_list,f_key_list,g_key_list,a_key_list,b_key_list):#,db_key_list,eb_key_list,gb_key_list,ab_key_list,bb_key_list):
+
+# unused
+def transform_note(c_key_list,d_key_list,e_key_list,f_key_list,g_key_list,a_key_list,b_key_list):
     scale = [48,50,52,53,55,57,59,60,62,64,65,67,69,71,72,74,76,77,79,81,83,84,86,88,89,91,93]
     transfor_list_C1 = scale[0:7]
     transfor_list_C2 = scale[7:14]
@@ -511,6 +513,8 @@ def transform_note(c_key_list,d_key_list,e_key_list,f_key_list,g_key_list,a_key_
 
     return note_list_all,dur_list_all
 
+
+# unused
 def get_key(list_of_four_beat):
     key_list =[]
     c_key_list = []
@@ -546,88 +550,9 @@ def get_key(list_of_four_beat):
                 a_key_list.append(file_)  
             if key[0].text == 'B':
                 b_key_list.append(file_)  
-
-
-
-            # key_fifth = root.findall('.//fifths') # root.findall('.//key')
-
-            # a chart for circle of fifths
-            # surprising only accounted for 7 keys when there's 12 technically
-            # added this part to fix
-            """
-            key = None
-            if key_fifth[0].text == '0':
-                key = 'C'
-            if key_fifth[0].text == '1':
-                key = 'G'
-            if key_fifth[0].text == '2':
-                key = 'D'
-            if key_fifth[0].text == '3':
-                key = 'A'
-            if key_fifth[0].text == '4':
-                key = 'E'
-            if key_fifth[0].text == '5':
-                key = 'B'
-            if key_fifth[0].text == '6' or key_fifth[0].text == '-6':
-                key = 'Gb'
-            if key_fifth[0].text == '-5':
-                key = 'Db'
-            if key_fifth[0].text == '-4':
-                key = 'Ab'
-            if key_fifth[0].text == '-3':
-                key = 'Eb'
-            if key_fifth[0].text == '-2':
-                key = 'Bb'
-            if key_fifth[0].text == '-1':
-                key = 'F'
-
-            # and now back to author's original code
-            
-            key_list.append(key)
-            if key == 'C':
-                c_key_list.append(file_)
-            if key == 'D':
-                d_key_list.append(file_)
-            if key == 'E':
-                e_key_list.append(file_) 
-            if key == 'F':
-                f_key_list.append(file_)
-            if key == 'G':
-                g_key_list.append(file_) 
-            if key == 'A':
-                a_key_list.append(file_)  
-            if key == 'B':
-                b_key_list.append(file_)       
-
-            if key == 'Db':
-                db_key_list.append(file_)
-            if key == 'Eb':
-                eb_key_list.append(file_) 
-            if key == 'Gb':
-                gb_key_list.append(file_)
-            if key == 'Ab':
-                ab_key_list.append(file_) 
-            if key == 'Bb':
-                bb_key_list.append(file_)  
-                """
         except:
             print('file broken')
-    # print('A key: {}'.format(key_list.count('A')))
-    # print('B key: {}'.format(key_list.count('B')))
-    # print('C key: {}'.format(key_list.count('C')))
-    # print('D key: {}'.format(key_list.count('D')))
-    # print('E key: {}'.format(key_list.count('E')))
-    # print('F key: {}'.format(key_list.count('F')))
-    # print('G key: {}'.format(key_list.count('G')))
-    
-    # print('Db key: {}'.format(key_list.count('Db')))
-    # print('Eb key: {}'.format(key_list.count('Eb')))
-    # print('Gb key: {}'.format(key_list.count('Gb')))
-    # print('Ab key: {}'.format(key_list.count('Ab')))
-    # print('Bb key: {}'.format(key_list.count('Bb')))
-
-    return c_key_list,d_key_list,e_key_list,f_key_list,g_key_list,a_key_list,b_key_list#, \
-           #db_key_list,eb_key_list,gb_key_list,ab_key_list,bb_key_list
+    return c_key_list,d_key_list,e_key_list,f_key_list,g_key_list,a_key_list,b_key_list
 
 def beats_(list_):
     list_of_four_beat =[]
@@ -644,6 +569,8 @@ def beats_(list_):
             print('cannot open the file')
     return list_of_four_beat
 
+
+# unused
 def check_chord_type(list_file):
     list_ = []
     for file_ in list_file:
@@ -672,6 +599,7 @@ def check_chord_type(list_file):
             print('cannot open')
     return list_
 
+
 def get_listfile(dataset_path):
 
     list_file=[]
@@ -684,6 +612,7 @@ def get_listfile(dataset_path):
             list_file.append(fp)
 
     return list_file
+
 
 def main():
     is_get_data = 0
@@ -707,7 +636,7 @@ def main():
         print('melody in range: {}'.format(len(note_list_all)))
 
     if is_get_matrix == 1:
-        note_list_all_c = np.load('note_list_all_c.npy')
+        note_list_all_c = np.load('note_list_all_c.npy')  # the 4 files created using csv_to_npy.py
         dur_list_all_c = np.load('dur_list_all_c.npy')
 
         chord_list_all_c = np.load('chord_list_all_c.npy')

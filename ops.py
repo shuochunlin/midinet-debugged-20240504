@@ -34,6 +34,7 @@ def conv_prev_concat(x, y):
 def batch_norm_1d(x):
     x_shape = x.shape[1]
     batch_nor = nn.BatchNorm1d(x_shape, eps=1e-05, momentum=0.9, affine=True)
+    # if GPU available, uncomment this for cuda
     # batch_nor = batch_nor.cuda()
 
     output = batch_nor(x)
@@ -41,7 +42,7 @@ def batch_norm_1d(x):
 
 
 def batch_norm_1d_cpu(x):
-    x_shape = x.shape[1]
+    # x_shape = x.shape[1]
     # ipdb.set_trace()
     # batch_nor = nn.BatchNorm1d(x_shape, eps=1e-05, momentum=0.9, affine=True)
     # output = batch_nor(x)
@@ -55,6 +56,8 @@ def batch_norm_1d_cpu(x):
 def batch_norm_2d(x):
     x_shape = x.shape[1]
     batch_nor = nn.BatchNorm2d(x_shape, eps=1e-05, momentum=0.9, affine=True)
+    
+    # if GPU available, uncomment this for cuda, though I haven't checked this yet
     # batch_nor = batch_nor.cuda()
     output = batch_nor(x)
     return output
@@ -62,12 +65,13 @@ def batch_norm_2d(x):
 
 def batch_norm_2d_cpu(x):
     # CPU does not perform batch normalization
+    # already commented out in original debugged version
 
     # x_shape = x.shape[1]
     # batch_nor = nn.BatchNorm2d(x_shape, eps=1e-05, momentum=0.9, affine=True)
     # batch_nor = batch_nor
     # output = batch_nor(x)
-    output = x  #x
+    output = x
     return output
 
 

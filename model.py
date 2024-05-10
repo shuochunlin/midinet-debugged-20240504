@@ -9,7 +9,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from ops import *
 
-# all instances of 16 related to timesteps were modified to 12
+# Note: I was currently unsuccessful in modifying the model yet
+# Rhythm dimension: 16 -> 12? (our dataset has a lot of triplets rhythm (3*4), instead of 16ths)
+# Pitch dimension: 128 -> 48 (pitch_range)
+
+# additional operations of the model were listed in ops.py
+
 
 class sample_generator(nn.Module):
     def __init__(self, pitch_range):
