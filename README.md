@@ -73,9 +73,9 @@ Generally the steps are:
 After running the model the following files would be created:
 |files                     |  function|
 |-|-|
-|(folder) "/file"           | saves fake samples and real samples as png files|
+|"/file/*.png"              | saves fake samples and real samples as png files|
 |"/draw_figs/lr*_epoch*.png"| saves a figure of model's training progression|
-|"/models/*.pth   "         | saves model files (note author did not implement restore training from an epoch)|
+|"/models/*.pth"            | saves model files (note author did not implement restore training from an epoch)|
 |lossD_list.npy             |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
 |lossG_list.npy             |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
 |lossD_list_all.npy         |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
