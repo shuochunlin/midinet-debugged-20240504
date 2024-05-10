@@ -1,4 +1,6 @@
 
+
+# midinet-debugged-20240504
 This is the edited version of [Debugged MidiNet](https://github.com/dongmingli-Ben/MidiNet-by-pytorch-Debugged), which is a debugged implementation of [Implementation of MidiNet by pytorch](https://github.com/annahung31/MidiNet-by-pytorch).
 
 MidiNet paper : https://arxiv.org/abs/1703.10847 
@@ -10,7 +12,7 @@ Instead of training on melody, we use the FiloBass dataset to train basslines.
 Dataset       : https://aim-qmul.github.io/FiloBass/ 
 
 --------------------------------------------------------------------------------------------------
-**Prepare the data (Optional)**
+## Prepare the data (Optional)
 
 This step is not necessary as dataset has be prepared in "./data" folder. But just in case.
 
@@ -28,7 +30,7 @@ This step converts xml files into training data in npy files format.
 The current files in "data" folder are augmented into 8 out of 12 keys, split into training and testing set 9:1. 128 pitch_dim, 16 subdivisions per bar.
 
 --------------------------------------------------------------------------------------------------
-**Training the model**
+## Training the model
 
 After preprocessing the data (placed in ```data``` folder), there should be 6 files:
 * data_X_tr.npy (training data - current bar melody)
@@ -45,15 +47,8 @@ After preprocessing the data (placed in ```data``` folder), there should be 6 fi
   is_sample = 1 for generating music after finishing training.
   The sampling function uses 1 bar of testing data as prompt, and the model generates the next 7 measures.
 
-3. Run main.py. 
+3. Run main.py.
 
---------------------------------------------------------------------------------------------------
-**Listening to results**
-
-To convert music samples into MIDI, Run demo.py.
-Type in the desired instrument (default = 0 for piano), and the volume (default 40). These are only for playback purposes
-
---------------------------------------------------------------------------------------------------
 |file                  |  purposes|
 |-|-|
 |requirement.txt                 |  toolkits used in the whole work|
@@ -61,4 +56,15 @@ Type in the desired instrument (default = 0 for piano), and the volume (default 
 |ops.py                          |  some functions used in model|
 |model.py                        |  Generator and Discriminator.   (Based on model 3 in the MidiNet paper)|
 |demo.py                         |  transform matrix into midi. (input : melody and chord matrix, output : midi)|
-# midinet-debugged-20240504
+
+--------------------------------------------------------------------------------------------------
+
+## Listening to music samples
+
+To convert music samples into MIDI, Run demo.py.
+Type in the desired instrument (default = 0 for piano), and the volume (default 40). These are only for playback purposes.
+
+(Note: setting instrument values other than 0 creates bugs for some reason)
+
+In case higher music quality demo is desired, music software would be needed to further process MIDI files into mp3 files.
+
