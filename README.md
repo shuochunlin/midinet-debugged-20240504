@@ -14,7 +14,7 @@ Dataset       : https://aim-qmul.github.io/FiloBass/
 --------------------------------------------------------------------------------------------------
 ## XML files to NPY files (Optional)
 
-This step is not necessary as dataset has be prepared in "./data" folder.
+This step is not necessary as dataset has been fully prepared in "./data" folder.
 
 The relevant files are not added to repository yet, but basically it's just processing the XML files (melody and chords information) into NPY file formats, so I can re-use the code written by the author.
 
