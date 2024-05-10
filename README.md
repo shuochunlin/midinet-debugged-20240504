@@ -94,10 +94,10 @@ After running the model the following files would be created:
 |"/models/*.pth"            | saves model files (note author did not implement restore training from an epoch)|
 |lossD_list.npy             |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
 |lossG_list.npy             |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
-|lossD_list_all.npy         |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
-|lossG_list_all.npy         |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
-|D_x_list.npy               |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
-|D_G_z_list.npy             |  Generated after is_train = 1. Used to draw loss during is_draw = 1.|
+|lossD_list_all.npy         |  Generated after is_train = 1. |
+|lossG_list_all.npy         |  Generated after is_train = 1. |
+|D_x_list.npy               |  Generated after is_train = 1. |
+|D_G_z_list.npy             |  Generated after is_train = 1. |
 |output_songs.npy           |  Generated after is_sample = 1. These will be read by demo.py later.|
 |output_chords.npy          |  Generated after is_sample = 1. These will be read by demo.py later.|
 
