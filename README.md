@@ -108,7 +108,7 @@ After running the model the following files would be created:
 To convert music samples into MIDI, Run demo.py.
 Type in the desired instrument (default = 0 for piano), and the volume (default 40). These are only for playback purposes.
 
-(Note: setting instrument values other than 0 creates bugs for some reason)
+(Note: setting instrument values other than 0 (such as 32 for Acoustic Bass instrument) creates runtime errors for some reason, and has yet to be fixed. )
 
 After running the files the samples are stored in "/samples" folder, in MIDI file format. In case higher music quality demo is desired, music software would be needed to further process MIDI files into mp3 files.
 
