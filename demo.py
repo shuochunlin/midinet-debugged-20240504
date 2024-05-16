@@ -104,16 +104,33 @@ def make_chord_track(chord,instrument,volume=40):
 
 
 def main():
+    d_data = np.load('data_x.npy', allow_pickle=True)
+    d_chord = np.load('data_y.npy', allow_pickle=True)
+
+
     data = np.load('output_songs.npy', allow_pickle=True)
     chord = np.load('output_chords.npy', allow_pickle=True)
-    instrument = int(input('which instrument you want to play? from 0 to 128,default=0:'))  # enter 0 for bass
-    volume     = int(input('how loud you want to play? from 1 to 127,default= 40:'))
+
+    print(np.shape(d_data), np.shape(d_chord),np.shape(data),np.shape(chord))
+    d_data = d_data.reshape((-1, 8, 128, 16))
+    d_chord = d_chord.reshape((-1, 8, 1, 13))
+    print(np.shape(d_data), np.shape(d_chord),np.shape(data),np.shape(chord))
+    
+    instrument = 0 # int(input('which instrument you want to play? from 0 to 128,default=0:'))  # enter 0 for bass
+    volume     = 100 # int(input('how loud you want to play? from 1 to 127,default= 40:'))
+
+    handle_dataset = 0 # int(input('handling dataset? 0 for samples, 1 for dataset'))
+    
+    if handle_dataset:
+        data = np.transpose(d_data, (0, 1, 3, 2))
+        chord = d_chord
 
     for i in range(data.shape[0]):
         one_song = data[i]
         song = []
         for item in one_song:
             item = item #.detach().numpy()
+            # print(np.shape(item))
             item = item.reshape(16,128)
             song.append(item)
         eight_bar = reshape_bar(song)
@@ -122,7 +139,7 @@ def main():
         
         song_chord = chord_list(chord,i)
         chord_player = get_chord(song_chord)
-        np.save('file/chord_'+str(i)+'.npy',chord_player)
+        # np.save('file/chord_'+str(i)+'.npy',chord_player)
         chord_track = make_chord_track(chord_player,instrument,volume)
         sample_name, multitrack = make_a_demo(track,chord_track,i)
 
@@ -130,7 +147,10 @@ def main():
         print(str(instrument))
         print(str(volume))
 
-        multitrack.write('samples/file'+str(sample_name)+'_instru_'+str(instrument)+'_volume_'+str(volume)+'.mid')
+        if handle_dataset:
+            multitrack.write('midi_dataset_segmented/dataset_'+str(sample_name)+'.mid')
+        else:
+            multitrack.write('samples/file'+str(sample_name)+'_instru_'+str(instrument)+'_volume_'+str(volume)+'.mid')
         if i % 100 == 0:
             print(str(sample_name)+'saved')
 
