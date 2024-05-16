@@ -1,4 +1,5 @@
 import numpy as np 
+import random 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -61,12 +62,12 @@ def load_data():
     return train_loader
 
 def main():
-    is_train   = 0 #1
-    is_draw    = 0 #1
+    is_train   = 1 #1
+    is_draw    = 1 #1
     is_sample  = 1 #0
 
-    epochs = 200
-    lr = 0.00022 # 0.0002
+    epochs = 250
+    lr = 0.00015 # 0.0002
 
     check_range_st = 0
     check_range_ed = 129  # modified from 129
@@ -251,6 +252,11 @@ def main():
         plt.savefig('draw_figs/lr'+ str(lr) +'_epoch'+str(epochs)+'.png')
 
     if is_sample == 1:
+
+        ###
+        generate_samples_multiplier = 50 
+        ###
+
         batch_size = 8
         nz = 100
         n_bars = 7
@@ -263,48 +269,45 @@ def main():
 
         prev_X_te = prev_X_te[:,:,check_range_st:check_range_ed,:]
 
-        y_te    = np.load('data/data_y_te.npy')    # this also needs to be handled
-
-        # Reshape y_tr to have lower dimension (batch_size, 13) (temporary - needs a better writing during earlier stage)
-        # y_te = y_te.reshape(y_te.shape[0], -1)
-
-        # X_te = np.load('data/tst_x.npy')
-        # prev_X_te = np.load('data/tst_x_prev.npy')
-        # prev_X_te = prev_X_te[:,:,check_range_st:check_range_ed,:]
-        # y_te    = np.load('data/chord_tst.npy')
+        y_te    = np.load('data/data_y_te.npy') 
        
         test_iter = get_dataloader(X_te,prev_X_te,y_te)
         kwargs = {'num_workers': 4, 'pin_memory': True}# if args.cuda else {}
         test_loader = DataLoader(test_iter, batch_size=batch_size, shuffle=False, **kwargs)
 
         netG = sample_generator(pitch_range)
-        netG.load_state_dict(torch.load('models/netG_epoch_19.pth'))
+        netG.load_state_dict(torch.load(f'models/netG_epoch_{epochs-1}.pth'))
 
         output_songs = []
         output_chords = []
         for i, (data,prev_data,chord) in enumerate(test_loader, 0):
             list_song = []
-            first_bar = data[0].view(1,1,16,128)
-            list_song.append(first_bar)
 
-            list_chord = []
-            first_chord = chord[0].view(1,13).cpu().numpy()  # originally 13
-            list_chord.append(first_chord)
-            noise = torch.randn(batch_size, nz)
+            # vary the first measure sample point
+            for j in range(generate_samples_multiplier):
+                chosen_offset = random.randint(0, len(data)-9)
+            
+                first_bar = data[chosen_offset].view(1,1,16,128)
+                list_song.append(first_bar)
 
-            for bar in range(n_bars):
-                z = noise[bar].view(1,nz)
-                y = chord[bar].view(1,13)
-                # print(y)
-                if bar == 0:
-                    prev = data[0].view(1,1,16,128)
-                    # print("PREV", prev.shape)
-                else:
-                    prev = list_song[bar-1].view(1,1,16,128)
-                sample = netG(z, prev, y, 1,pitch_range)
-                # print(sample.shape)
-                list_song.append(sample)
-                list_chord.append(y.numpy())
+                list_chord = []
+                first_chord = chord[chosen_offset].view(1,13).cpu().numpy()  # originally 13
+                list_chord.append(first_chord)
+                noise = torch.randn(batch_size, nz)
+
+                for bar in range(n_bars):
+                    z = noise[bar].view(1,nz)
+                    y = chord[bar].view(1,13)
+                    # print(y)
+                    if bar == 0:
+                        prev = data[chosen_offset].view(1,1,16,128)
+                        # print("PREV", prev.shape)
+                    else:
+                        prev = list_song[bar-1].view(1,1,16,128)
+                    sample = netG(z, prev, y, 1,pitch_range)
+                    # print(sample.shape)
+                    list_song.append(sample)
+                    list_chord.append(y.numpy())
 
             print('num of output_songs: {}'.format(len(output_songs)))
             output_songs.append(list_song)
@@ -312,8 +315,9 @@ def main():
         
         with torch.no_grad():
             # Convert each tensor in the nested lists to a NumPy array
-            output_songs_np = [[tensor.numpy() for tensor in sublist] for sublist in output_songs]
-            output_chords_np = [tensor for tensor in output_chords]
+            # hardcoded for now
+            output_songs_np = [[tensor.numpy() for tensor in sublist] for sublist in output_songs]#.view(5,8,-1)
+            output_chords_np = [tensor for tensor in output_chords]#.view(5,8,-1)
 
             # Save the nested list of NumPy arrays to a file
             np.save('output_songs.npy', output_songs_np)
