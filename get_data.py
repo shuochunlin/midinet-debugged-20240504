@@ -7,10 +7,11 @@ import numpy as np
 
 
 # data augmentation step, by shifting midi pitch (0 for no augmentation, 12 for all 12 keys)
-data_aug_count = 8
+data_aug_count = 0
 
 def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wrapback=128):
 
+    song_samples=[]
     cur_bar =np.zeros((1,dim_pitch,dim_bar),dtype=int)
     idx = 1
     sd = 0
@@ -55,17 +56,19 @@ def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wra
             cur_bar =np.zeros((1,dim_pitch,dim_bar),dtype=int)
             sd = 0
             ed = 0
+            song_samples.append(song_sample)
             # print(cur_bar)
             # print(song_sample)
         # if idx == len(cur_song)-1 and np.sum(cur_bar)!=0:
         #     song_sample.append(cur_bar)
-    # print("Size:", np.shape(song_sample))
+        # print("Size:", np.shape(song_sample))
 
     return song_sample
 
 def build_matrix(note_list_all_c,dur_list_all_c):
     data_x = []           
     prev_x = []
+    song_lengths = []  # keep track of how long each song is
     zero_counter = 0
 
     for i in range(len(note_list_all_c)):
@@ -75,6 +78,8 @@ def build_matrix(note_list_all_c,dur_list_all_c):
 
         # create data_augmentation
         # data shifts semitone up each time
+
+        samples_12keys = []
         for j in range(data_aug_count+1):
 
             # suggested modification: take only 36 ~ 84 pitch range 
@@ -85,13 +90,13 @@ def build_matrix(note_list_all_c,dur_list_all_c):
             # song, dur, n_ratio (divisions per beat), dim_pitch, dim_bar (divisions per bar * 8), pitch offset, "modulo"
             song_sample = get_sample(song,dur,4,128,128, start_pitch= -j, wrapback=128)   # reusing the offset code which is why it's negative
             np_sample = np.asarray(song_sample)
-            if len(np_sample) == 0:
-                zero_counter +=1
-            if len(np_sample) != 0:
-                np_sample =np_sample[0]
+            samples_12keys.append(np_sample)
+        
+        for segment_index in range(len(samples_12keys[0])):
+            for key_index in range(len(samples_12keys)):
+                # if len(sample) != 0:   # assuming the sample has notes, which is obviously the case so I removed the check
+                np_sample = samples_12keys[key_index][segment_index]
                 np_sample = np_sample.reshape(1,1,128,128)
-
-                # since we're dealing with swing and triples, dimensions set to 12
 
                 if np.sum(np_sample) != 0:
                     place = np_sample.shape[3]
@@ -102,13 +107,15 @@ def build_matrix(note_list_all_c,dur_list_all_c):
                     new_prev = np.zeros(new.shape,dtype=int)
                     new_prev[1:, :, :, :] = new[0:new.shape[0]-1, :, :, :]            
                     data_x.append(new)
-                    prev_x.append(new_prev)  
+                    prev_x.append(new_prev) 
+        
+        song_lengths.append(len(samples_12keys[0]))
 
     data_x = np.vstack(data_x)
     prev_x = np.vstack(prev_x)
 
 
-    return data_x,prev_x,zero_counter
+    return data_x,prev_x,zero_counter,song_lengths
 
 def build_chord_matrix(chord_list_all_c,cdur_list_all_c):
     data_y = []
@@ -116,14 +123,19 @@ def build_chord_matrix(chord_list_all_c,cdur_list_all_c):
         chords = chord_list_all_c[i]
         dur = cdur_list_all_c[i]
 
+        samples_12keys = []
         for j in range(data_aug_count+1):
 
             song_sample = get_sample(chords,dur, 0.25, 13, 8, start_pitch= -j, wrapback=12) 
             np_sample = np.asarray(song_sample)
+            samples_12keys.append(np_sample)
+
+        for segment_index in range(len(samples_12keys[0])):
+            for key_index in range(len(samples_12keys)):
             # if len(np_sample) == 0:
             #     zero_counter +=1
-            if len(np_sample) != 0:
-                np_sample =np_sample[0]
+            # if len(np_sample) != 0:
+                np_sample = samples_12keys[key_index][segment_index]
                 np_sample = np_sample.reshape(1,1,13,8)
                 # print(np_sample)
 
@@ -642,19 +654,22 @@ def main():
         chord_list_all_c = np.load('chord_list_all_c.npy')
         cdur_list_all_c = np.load('cdur_list_all_c.npy')
 
-        print(chord_list_all_c)
-        print(cdur_list_all_c)
+        # print(chord_list_all_c)
+        # print(cdur_list_all_c)
+        print("Processing data...")
 
-        data_x, prev_x, zero_counter = build_matrix(note_list_all_c,dur_list_all_c)
+        data_x, prev_x, zero_counter, song_lengths = build_matrix(note_list_all_c,dur_list_all_c)
         data_y = build_chord_matrix(chord_list_all_c,cdur_list_all_c)
         np.save('data_x.npy',data_x)
         np.save('prev_x.npy',prev_x)
         np.save('data_y.npy',data_y)
+        np.save('song_lengths.npy', song_lengths)
 
         print('final tab num: {}'.format(len(note_list_all_c)))
-        print('songs not long enough: {}'.format(zero_counter))
         print('sample shape: {}, prev sample shape: {}'.format(data_x.shape, prev_x.shape))
         print('chords sample shape: {}'.format(data_y.shape))
+        
+        print('Song Lengths (Number of 8-bar divisions): {}'.format(song_lengths))
     
 if __name__ == "__main__" :
 
