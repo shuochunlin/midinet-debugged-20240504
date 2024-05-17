@@ -2,7 +2,7 @@ import numpy as np
 from pypianoroll import Multitrack, Track
 import matplotlib
 matplotlib.use('Agg')
-
+import datetime
 
 
 def find_pitch(song,volume=40):   # song shape(128,128), which is (time step, pitch)
@@ -22,7 +22,7 @@ def reshape_bar(song):
         b = song[i+1]
         eight_bar  = np.concatenate((eight_bar,b),axis=0)
     eight_bar = eight_bar.astype(float)
-    print("A bar's shape: {}".format(eight_bar.shape))
+    #print("A bar's shape: {}".format(eight_bar.shape))
     return eight_bar
 
 def make_a_track(eight_bar_binarized,track_name ='melody' ,instrument=0):
@@ -107,9 +107,10 @@ def main():
     d_data = np.load('data_x.npy', allow_pickle=True)
     d_chord = np.load('data_y.npy', allow_pickle=True)
 
+    model_id = input("Current Model's ID") 
 
-    data = np.load('output_songs.npy', allow_pickle=True)
-    chord = np.load('output_chords.npy', allow_pickle=True)
+    data = np.load(f'{model_id}_output_songs.npy', allow_pickle=True)
+    chord = np.load(f'{model_id}_output_chords.npy', allow_pickle=True)
 
     print(np.shape(d_data), np.shape(d_chord),np.shape(data),np.shape(chord))
     d_data = d_data.reshape((-1, 8, 128, 16))
@@ -144,17 +145,16 @@ def main():
         sample_name, multitrack = make_a_demo(track,chord_track,i)
 
         print(str(sample_name))
-        print(str(instrument))
-        print(str(volume))
+        #print(str(instrument))
+        #print(str(volume))
+        now = datetime.datetime.now()
 
         if handle_dataset:
             multitrack.write('midi_dataset_segmented/dataset_'+str(sample_name)+'.mid')
         else:
-            multitrack.write('samples/file'+str(sample_name)+'_instru_'+str(instrument)+'_volume_'+str(volume)+'.mid')
+            multitrack.write('samples/generated_file'+str(sample_name)+"-"+str(now.strftime("%Y%m%d-%H"))+'h.mid')
         if i % 100 == 0:
             print(str(sample_name)+'saved')
-
-
 
 
 

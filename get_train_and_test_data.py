@@ -22,32 +22,7 @@ print("Chord shape:",np.shape(chord_data))
 print("Song Lengths:", chord_data)
 time.sleep(3)  # comment this out to skip waiting
 
-# song indices hard coded to just the 47 songs we have (I removed one)
-
-"""song_idx = 47  # int(data.shape[0]/8) // (data_aug_count + 1)
-test_ratial = 0.1
-test_song_num = round(song_idx*test_ratial)
-train_song_num = (song_idx - test_song_num) // data_aug_count
-print('total song number: {}'.format(song_idx))
-print('number of test songs: {}, \nnumber of train songs: {}'.format(test_song_num,train_song_num))
-time.sleep(3)"""
-
-#create the song idx for test data
-
-"""full = np.arange(song_idx)
-
-test_idx= random.sample(range(0,full.shape[0]),test_song_num)
-test_idx = np.asarray(test_idx)
-print('total {} song idx for test: {}'.format(test_idx.shape[0],test_idx))
-time.sleep(3)
-
-#create the song idx for train data
-train_idx = np.delete(full,test_idx)
-print('total {} song idx for train: {}'.format(train_idx.shape[0],train_idx))
-time.sleep(3)"""
-
-### REWRITTEN PARTS
-# Step 1: Create a list of song indices
+# Create a list of song indices
 start_indices = [0]
 for length in song_lengths[:-1]:
     start_indices.append(start_indices[-1] + length ) #* data_aug_count)
@@ -55,18 +30,18 @@ for length in song_lengths[:-1]:
 # Get the total number of songs
 num_songs = len(song_lengths)
 
-# Step 2: Randomly select test songs
+# Randomly select test songs
 test_song_num = int(0.2 * num_songs)  # For example, 20% of the songs
 test_idx = random.sample(range(num_songs), test_song_num)
 
-# Step 3: Remove test songs from training set
+# Remove test songs from training set
 train_idx = [i for i in range(num_songs) if i not in test_idx]
 
 # Printing results
 print('Total {} song indices for train: {}'.format(len(train_idx), train_idx))
 print('Total {} song indices for test: {}'.format(len(test_idx), test_idx))
 
-# Step 4: Create segment indices for training and testing sets
+# Create segment indices for training and testing sets
 train_segments = []
 test_segments = []
 
@@ -86,8 +61,6 @@ test_segments = np.array(test_segments)
 print('Total {} segments for train: {}'.format(len(train_segments), train_segments))
 print('Total {} segments for test: {}'.format(len(test_segments), test_segments))
 
-# time.sleep(15)
-### REWRITTEN
 
 def test_data(data,test_idx,chord_data):
 

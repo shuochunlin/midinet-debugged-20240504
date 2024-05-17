@@ -7,7 +7,7 @@ import numpy as np
 
 
 # data augmentation step, by shifting midi pitch (0 for no augmentation, 12 for all 12 keys)
-data_aug_count = 0
+data_aug_count = 3
 
 def get_sample(cur_song, cur_dur,n_ratio, dim_pitch, dim_bar, start_pitch=0, wrapback=128):
 
