@@ -39,10 +39,12 @@ class sample_generator(nn.Module):
     def forward(self, z, prev_x, y ,batch_size,pitch_range):
 
         # h3_prev = F.leaky_relu(self.batch_nor_256(self.h0_prev(prev_x)),0.2)
-        h0_prev = lrelu(batch_norm_2d_cpu(self.h0_prev(prev_x)),0.2)   #[72, 16, 16, 1]
-        h1_prev = lrelu(batch_norm_2d_cpu(self.h1_prev(h0_prev)),0.2)  #[72, 16, 8, 1]
-        h2_prev = lrelu(batch_norm_2d_cpu(self.h2_prev(h1_prev)),0.2)  #[72, 16, 4, 1]
-        h3_prev = lrelu(batch_norm_2d_cpu(self.h3_prev(h2_prev)),0.2)  #[72, 16, 2, 1])
+
+        # leaky relu testing for 0.02
+        h0_prev = lrelu(batch_norm_2d_cpu(self.h0_prev(prev_x)),0.02)   #[72, 16, 16, 1]
+        h1_prev = lrelu(batch_norm_2d_cpu(self.h1_prev(h0_prev)),0.02)  #[72, 16, 8, 1]
+        h2_prev = lrelu(batch_norm_2d_cpu(self.h2_prev(h1_prev)),0.02)  #[72, 16, 4, 1]
+        h3_prev = lrelu(batch_norm_2d_cpu(self.h3_prev(h2_prev)),0.02)  #[72, 16, 2, 1])
 
         yb = y.view(batch_size,  self.y_dim, 1, 1)  #(72,13,1,1)
         # print("yb:", yb.shape)

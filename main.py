@@ -93,13 +93,13 @@ def main():
     is_draw    = 1 #1
     is_sample  = 1 #0
 
-    model_id   = 103
+    model_id   = 105 # has augmentation
 
-    has_val_test = 1
+    has_val_test = 1  # 0 if just train/test split, 1 with validation
 
-    epochs = 60
-    lrD = 0.0001 # 0.0002
-    lrG = 0.00035 # 0.0002
+    epochs = 40
+    lrD = 0.00015 # 0.0002
+    lrG = 0.00025 # 0.0002
 
     check_range_st = 0
     check_range_ed = 129  # modified from 129
@@ -121,7 +121,7 @@ def main():
         optimizerD = optim.Adam(netD.parameters(), lr=lrD, betas=(0.5, 0.999))
         optimizerG = optim.Adam(netG.parameters(), lr=lrG, betas=(0.5, 0.999)) 
              
-        batch_size = 32 # 72
+        batch_size = 64 # 72
         nz = 100
         fixed_noise = torch.randn(batch_size, nz, device=device)
         real_label = 1

@@ -6,7 +6,7 @@ import time
 # added handling for validation set
 
 # Note the number of augmentations taken prior, has to match get_data.py
-data_aug_count = 0  # number of pitch shifts done. 0 for no augmentation. 12 for all 12 keys in music.
+data_aug_count = 3  # number of pitch shifts done. 0 for no augmentation. 12 for all 12 keys in music.
 
 #load data
 
