@@ -82,17 +82,14 @@ def build_matrix(note_list_all_c,dur_list_all_c):
         samples_12keys = []
         for j in range(data_aug_count+1):
 
-            # suggested modification: take only 36 ~ 84 pitch range 
-            # we only need to use 48 MIDI pitches
-            # in that case, start_pitch = 36-j, dim_pitch=48
-
             # get_sample() params:
             # song, dur, n_ratio (divisions per beat), dim_pitch, dim_bar (divisions per bar * 8), pitch offset, "modulo"
             song_sample = get_sample(song,dur,4,128,128, start_pitch= -j, wrapback=128)   # reusing the offset code which is why it's negative
             np_sample = np.asarray(song_sample)
             samples_12keys.append(np_sample)
         
-        for segment_index in range(len(samples_12keys[0])):
+        # print(len(samples_12keys[0]))
+        for segment_index in range(12): # len(samples_12keys[0])):  # might have bug, so let's just use fixed number of segments then
             for key_index in range(len(samples_12keys)):
                 # if len(sample) != 0:   # assuming the sample has notes, which is obviously the case so I removed the check
                 np_sample = samples_12keys[key_index][segment_index]
@@ -109,7 +106,7 @@ def build_matrix(note_list_all_c,dur_list_all_c):
                     data_x.append(new)
                     prev_x.append(new_prev) 
         
-        song_lengths.append(len(samples_12keys[0]))
+        song_lengths.append(12)#len(samples_12keys[0]))
 
     data_x = np.vstack(data_x)
     prev_x = np.vstack(prev_x)
@@ -130,7 +127,7 @@ def build_chord_matrix(chord_list_all_c,cdur_list_all_c):
             np_sample = np.asarray(song_sample)
             samples_12keys.append(np_sample)
 
-        for segment_index in range(len(samples_12keys[0])):
+        for segment_index in range(12): #len(samples_12keys[0])):
             for key_index in range(len(samples_12keys)):
             # if len(np_sample) == 0:
             #     zero_counter +=1

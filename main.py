@@ -25,6 +25,17 @@ class get_dataloader(object):
     def __len__(self):
         return self.size
 
+
+# other loss functions tried / will try
+def continuity_loss(generated_sequence):
+    """
+    Penalize changes in pitch to encourage longer notes.
+    """
+    diff = torch.diff(generated_sequence, dim=-1)
+    continuity_penalty = torch.sum(torch.abs(diff))
+    return continuity_penalty
+
+
 def load_data(batch_size=72, has_val_test=0):
     #######load the data########
     check_range_st = 0
@@ -93,22 +104,28 @@ def main():
     is_draw    = 1 #1
     is_sample  = 1 #0
 
-    model_id   = 105 # has augmentation
+    model_id   = 206
 
     has_val_test = 1  # 0 if just train/test split, 1 with validation
 
-    epochs = 40
-    lrD = 0.00015 # 0.0002
+    epochs = 20
+    lrD = 0.0002 # 0.0002
     lrG = 0.00025 # 0.0002
 
     check_range_st = 0
     check_range_ed = 129  # modified from 129
     pitch_range = check_range_ed - check_range_st-1
 
-    label_smoothing_weight = 0.9  # default is 0.9 by author
-    feature_matching_weight = 0.15  # default if 0.1 by author
-    mean_image_weight = 0.01  # default if 0.01 by author
-    
+    label_smoothing_weight = 0.8  # default is 0.9 by author
+    mean_image_weight = 0.1  # LAMBDA 1 -  default if 0.01 by author : can be much higher weight to sound more like existing music
+    feature_matching_weight = 0.01  # LAMBDA 2 - default if 0.1 by author : can be much higher to sound like existing music
+    continuity_weight = 0.0001  # LAMBDA 3 - NEW: penalizes switching notes to prefer holding them out
+
+    # author's comments
+    # model 1: (LAMBDA 1, LAMBDA 2) = 0.1, 1, no chords conditioning
+    # model 2: (LAMBDA 1, LAMBDA 2) = 0.01, 0.1, chords conditioning
+    # model 3: [undisclosed settings for creative output]
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if is_train == 1 :
@@ -121,7 +138,7 @@ def main():
         optimizerD = optim.Adam(netD.parameters(), lr=lrD, betas=(0.5, 0.999))
         optimizerG = optim.Adam(netG.parameters(), lr=lrG, betas=(0.5, 0.999)) 
              
-        batch_size = 64 # 72
+        batch_size = 16 # 72
         nz = 100
         fixed_noise = torch.randn(batch_size, nz, device=device)
         real_label = 1
@@ -143,9 +160,9 @@ def main():
         D_x_list = []
         D_G_z_list = []
 
-        best_val_lossD = float('inf')
-        best_val_lossG = float('inf')
-        lr_adjust_cooldown = 0
+        #best_val_lossD = float('inf')
+        #best_val_lossG = float('inf')
+        #lr_adjust_cooldown = 0
 
         for epoch in range(epochs):
             sum_lossD = 0
@@ -239,7 +256,12 @@ def main():
                 smean_image_from_i = reduce_mean_0(real_cpu)
                 mean_l2_loss = loss_(mean_image_from_g, smean_image_from_i)/2   
                 fm_g_loss2 = torch.mul(mean_l2_loss, mean_image_weight)     # mean_image_weight, default 0.01
+
                 errG = g_loss0 + fm_g_loss1 + fm_g_loss2
+
+                # optional continuity_weight
+                if continuity_weight:
+                    errG += continuity_weight * continuity_loss(fake)
                 sum_lossG +=errG
                 errG.backward()
                 lossG_list_all.append(errG.item())

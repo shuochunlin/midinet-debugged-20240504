@@ -3,7 +3,8 @@ from pypianoroll import Multitrack, Track
 import matplotlib
 matplotlib.use('Agg')
 import datetime
-
+import os
+import pretty_midi
 
 def find_pitch(song,volume=40):   # song shape(128,128), which is (time step, pitch)
     for time in range(song.shape[0]):
@@ -53,18 +54,18 @@ def chord_list(chord,idx):
 
 
 def build_chord_map():
-    c_maj  = [60,64,67]
-    c_min  = [60,63,67]
+    c_maj  = [60,64,67,70]
+    c_min  = [60,63,67,70]
     chord_map = []
     chord_list_maj = []
     chord_list_min = []
     chord_list_maj.append(c_maj)
     chord_list_min.append(c_min)
     for i in range(11):
-        chord = [x+1 for x in c_maj] 
+        chord = [(x+1)%12 + 60 for x in c_maj]   # wrapping
         c_maj = chord
         chord_list_maj.append(chord)
-        chord_min = [x+1 for x in c_min]
+        chord_min = [(x+1)%12 + 60 for x in c_min]  # wrapping
         chord_list_min.append(chord_min)
         c_min = chord_min
     chord_map.append(chord_list_maj)
@@ -101,6 +102,58 @@ def make_chord_track(chord,instrument,volume=40):
                   name='chord')
     return track
 
+def jazzify(file, drum_midi):
+    # load track, create output track
+    original_midi = pretty_midi.PrettyMIDI(file)
+    output_midi = pretty_midi.PrettyMIDI()
+    
+    # copy melody track from original MIDI
+    melody_instrument = original_midi.instruments[0]
+    melody_instrument.program = pretty_midi.instrument_name_to_program('Acoustic Bass')
+    for note in melody_instrument.notes:
+            note.pitch -= 12
+            note.start = int(note.start * 6) / 6 
+    # print(melody_instrument.program)
+    output_midi.instruments.append(melody_instrument)
+    
+    # chord track
+    chord_instrument = original_midi.instruments[1]
+    chord_instrument.program = pretty_midi.instrument_name_to_program('Acoustic Grand Piano')
+    
+    chords = [[], [], [], [], [], [], [], []] # 8 bars always
+    for note in chord_instrument.notes:
+        bar_start = int(note.start / 2)
+        bar_end = int(note.end / 2)
+        for i in range(bar_start, bar_end):
+            chords[i].append(note)
+    
+    # arbirtrary setup for the chords played by piano
+    chords_timing = [[(0., 0.63), (0.83, 1.)],
+                     [(0.33, 0.5), (1.0, 1.5)],
+                     [(0.33, 0.5), (0.83, 1.5)],
+                     [(0.0, 0.33), (0.33, 0.5), (0.83, 1.)]
+                    ]
+    
+    # convert chords into piano track
+    new_piano_instrument = pretty_midi.Instrument(program=0, name='Acoustic Grand Piano')
+    for bar_num, chord in enumerate(chords):  # bar number counts from 0
+        for note in chord:
+            for timing in chords_timing[bar_num%4]:
+                chord_note = pretty_midi.Note(
+                    velocity=64, pitch=note.pitch, start=timing[0]+bar_num*2, end=timing[1]+bar_num*2)
+                new_piano_instrument.notes.append(chord_note)
+    # print(new_piano_instrument.notes)
+    # print(new_piano_instrument.program)
+    
+    # add drums
+    drum_instrument = drum_midi.instruments[0]
+    drum_instrument.is_drum = True
+
+    output_midi.instruments.append(new_piano_instrument)
+    output_midi.instruments.append(drum_instrument)
+    # print(drum_instrument.program)
+    
+    return output_midi
 
 
 def main():
@@ -121,6 +174,7 @@ def main():
     volume     = 100 # int(input('how loud you want to play? from 1 to 127,default= 40:'))
 
     handle_dataset = 0 # int(input('handling dataset? 0 for samples, 1 for dataset'))
+    export_jazzified = 1 # export the files with jazzified output closer to real performance
     
     if handle_dataset:
         data = np.transpose(d_data, (0, 1, 3, 2))
@@ -144,18 +198,35 @@ def main():
         chord_track = make_chord_track(chord_player,instrument,volume)
         sample_name, multitrack = make_a_demo(track,chord_track,i)
 
-        print(str(sample_name))
+        # print(str(sample_name))
         #print(str(instrument))
         #print(str(volume))
         now = datetime.datetime.now()
 
         if handle_dataset:
-            multitrack.write('midi_dataset_segmented/dataset_'+str(sample_name)+'.mid')
-        else:
-            multitrack.write('samples/generated_file'+str(sample_name)+"-"+str(now.strftime("%Y%m%d-%H"))+'h.mid')
-        if i % 100 == 0:
-            print(str(sample_name)+'saved')
+            midi_export_filename = 'midi_dataset_segmented/dataset_'+str(sample_name)+'.mid'
+        else: 
+            midi_export_filename = 'samples/id_'+str(model_id)+'_generated_file'+str(sample_name)+"-"+str(now.strftime("%Y%m%d-%H"))+'h.mid'
 
+        multitrack.write(midi_export_filename)
+
+
+        # from the file we then convert that into 
+        if export_jazzified:
+            # load the drum file
+            drum_midi = pretty_midi.PrettyMIDI('MIDI_utils/drum_track_MIDI.mid', initial_tempo=120.0)
+            jazzified_track = jazzify(midi_export_filename, drum_midi)
+
+            # save file
+            if not os.path.exists('samples/jazzified/'):
+                os.makedirs('samples/jazzified/')
+            jazzified_filename = 'samples/jazzified/jazzified_'+ os.path.split(midi_export_filename)[-1]
+            jazzified_track.write(jazzified_filename)
+
+        if i % 100 == 0:
+            print(str(sample_name)+' saved')
+
+    print("Saving complete.")
 
 
 if __name__ == "__main__" :
