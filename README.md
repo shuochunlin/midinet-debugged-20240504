@@ -118,8 +118,10 @@ Relevant hyperparameters, aside from the model, include:
 5. batch_size: The usual batch size.
 
 Metrics to monitor while training:
-1. Loss_D: Discriminator's loss. 
-2. Loss_G: Generator's loss. 
+1. Loss_D: Discriminator loss. Should decrease over time slowly.
+2. Loss_G: Generator loss. Should not be too low or too high.
+3. D(x): Score for Discriminator's real score, for identifying real data correctly. Should be around 0.9 (label_smoothing_weight) to identify real examples, so generator tries to match it.
+4. D(G(z)): Score for Discriminator fake score, for identifying fake data correctly. Should hover around 0.5 after a while if generator's fooling discriminator half the time.
 
 After running the model the following files would be created:
 |files                     |  function|
