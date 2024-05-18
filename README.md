@@ -110,6 +110,17 @@ Generally the steps are:
   [New] has_val_test = 0 for not using validation set, 1 for using validation set
 3. Run main.py.
 
+Relevant hyperparameters, aside from the model, include:
+1. label_smoothing_weight: Author set real labels to 0.9 (instead of 1), and fake labels to 0. Alter this value to affect confidence of discriminator.
+2. mean_image_weight: Lambda 1 of author's feature matching function. Setting values higher lead to closer resemblance to real data.
+3. feature_matching_weight: Lambda 2 of author's feature matching function. Setting values higher lead to closer resemblance to real data.
+4. continuity_weight: [new] Added to penalize model for not holding notes enough. Optimal values still under experimentation.
+5. batch_size: The usual batch size.
+
+Metrics to monitor while training:
+1. Loss_D: Discriminator's loss. 
+2. Loss_G: Generator's loss. 
+
 After running the model the following files would be created:
 |files                     |  function|
 |-|-|
@@ -124,6 +135,27 @@ After running the model the following files would be created:
 |D_G_z_list_{model_id}.npy             |  Generated after is_train = 1. |
 |{model_id}_output_songs.npy           |  Generated after is_sample = 1. These will be read by demo.py later.|
 |{model_id}_output_chords.npy          |  Generated after is_sample = 1. These will be read by demo.py later.|
+
+### Notes on Loss Function
+As per paper, the GAN learns G and D by solving:
+
+minmax V(D,G) = E_{x~P_{data}(X)}[log(D(X))] + E_{z~P_z(z)}[log(1-D(G(z)))]
+
+While the generator added these two terms as well to increase training stability:
+
+lambda_1||{E X - E G(z)}||^2_2 _ lambda_2||E f(X) - E f(G(z))||^2_2
+
+I also added continuity_loss to penalize not holding notes long enough. Given generated sequence $G(z)$ in shape of $(B,T,P)$ where $B$ is batch size, $T$ is seq length, $P$ is pitch number classes, we compute the pitch differences for consecutive timesteps and then take the absolute value of those differences. In an equation:
+
+$$|\Delta G(z)| = \left| G(z)[:, 1:, :] - G(z)[:, :-1, :] \right|$$
+
+Finally we take the sum of absolute differences to get the penalty:
+
+$$L_{\text{continuity}} = \sum_{b=1}^B \sum_{t=1}^{T-1} \sum_{p=1}^P \left| G(z)[b, t, p] - G(z)[b, t-1, p] \right|$$
+
+With that we simply add this (multiplied by a weight lambda3):
+
+lambda_1||{E X - E G(z)}||^2_2 _ lambda_2||E f(X) - E f(G(z))||^2_2 + lambda_3(L_{continuity})
 
 --------------------------------------------------------------------------------------------------
 
