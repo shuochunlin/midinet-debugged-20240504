@@ -157,6 +157,9 @@ With that we simply add this (multiplied by a weight lambda3):
 
 lambda_1||{E X - E G(z)}||^2_2 _ lambda_2||E f(X) - E f(G(z))||^2_2 + lambda_3(L_{continuity})
 
+
+In regards to chord adherence, we found that the model has bigger problems adapting to learning rhythmic patterns, so the focus has shifted to that instead. 
+
 --------------------------------------------------------------------------------------------------
 
 ## Listening to music samples
